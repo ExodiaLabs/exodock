@@ -1,2 +1,144 @@
-# exodock
-Docker management, simplified. A keyboard-driven administration console by Exodialabs.
+# Exodock
+
+**Exodock — Docker management, simplified.**
+
+A keyboard-driven Docker administration console by **Exodialabs**. Explore
+containers, images, volumes, networks and Compose projects from one terminal,
+then manage a container's lifecycle with explicit confirmation.
+
+Exodock v0.1 is a development MVP written in Go with Bubble Tea v2 and the
+official Docker Engine SDK. It uses the established Exodialabs palette. It
+does not require a browser, a separate server or elevated privileges.
+
+## Run from source
+
+Use Go 1.27.2 (the CI toolchain) and an interactive terminal of at least 60×18
+cells. Docker is required for live mode; the sandbox works without it.
+
+```sh
+go mod download
+make build
+./dist/exodock --demo
+./dist/exodock --readonly
+./dist/exodock
+```
+
+`--demo` never contacts Docker, and its actions affect only sample data.
+`--readonly` blocks mutations in both the UI and application/Engine layers.
+The header shows the target and access mode before you perform any action.
+
+## What the MVP does
+
+- Overview of the Docker daemon, inventories and unhealthy containers.
+- List, filter, inspect, start, stop, restart and remove stopped containers.
+- Browse and inspect images, volumes and networks.
+- Discover Compose projects and their services through Engine labels.
+- Follow container logs, pause scrolling, search the loaded buffer, filter
+  stdout/stderr and select a recent time window.
+- View selected-container CPU, memory and network counters with a short CPU
+  history; request Docker disk accounting from the System section.
+- Global resource search, command palette, contextual help, adaptive layouts,
+  dark/light/automatic themes, ASCII and monochrome modes.
+
+Every container action requires confirmation, with **Cancel selected by
+default**. Removal preserves volumes and does not use force. Exodock refuses
+confirmation when the terminal cannot display its complete scope. Docker can
+still reject an operation if another client changes the resource state.
+
+Images, volumes and networks are read-only in v0.1. Image pulls, their deletion,
+network creation, Compose lifecycle commands and bulk actions follow the MVP.
+There is no global prune, shell execution or automatic sudo.
+
+## Keyboard guide
+
+| Key | Action |
+| --- | --- |
+| `1`–`8`, `[` / `]` | Switch section |
+| Arrows or `j` / `k` | Move in the focused section, list or detail |
+| `Tab` / `Shift+Tab` | Change focus |
+| `Enter` / `Esc` | Open details / return or cancel |
+| `/`, `Ctrl+k`, `:` | Filter, search all resources, command palette |
+| `a`, `l`, `s`, `i` | Actions, logs, statistics, safe inspection |
+| `r`, `d` in System | Refresh, measure Docker disk usage |
+| `Space`, `f`, `v`, `t` in Logs | Pause, follow, stream, time range |
+| `?`, `q`, `Ctrl+c` | Help, quit, quit from any view |
+
+Text fields capture characters without triggering shortcuts. `q` closes an
+overlay; `Ctrl+c` quits from any view. Press `?` for the complete guide.
+
+## Docker targets and configuration
+
+```sh
+./dist/exodock --context desktop-linux
+./dist/exodock --host unix:///run/user/1000/docker.sock --readonly
+./dist/exodock --ascii --no-color --refresh 3s
+./dist/exodock --theme light
+./dist/exodock --help
+```
+
+`--context` and `--host` are mutually exclusive. Resolution follows explicit
+flags, then `DOCKER_CONTEXT`, `DOCKER_HOST`, and the current Docker CLI context.
+The CLI resolves context metadata; Engine requests use the SDK. When the CLI
+is unavailable, an explicit socket works; default resolution uses the standard
+local socket and displays that choice. Invalid contexts never silently fall
+back to another daemon. Remote SSH/TLS transports are deferred.
+
+Preferences are optional: `$XDG_CONFIG_HOME/exodock/config.json` (or the
+platform's user-config directory). `--config FILE` selects another file.
+
+```json
+{
+  "version": 1,
+  "theme": "dark",
+  "ascii": false,
+  "no_color": false,
+  "refresh_seconds": 5
+}
+```
+
+Flags override preferences; `NO_COLOR` disables color. Exodock does not create
+a preferences file or store Docker credentials. Inspection exposes an allowlist
+of fields and masks environment variables. Container logs can contain
+application secrets; Exodock displays them in the local bounded buffer,
+never in a diagnostic file or telemetry upload.
+
+## Development and validation
+
+```sh
+make check
+EXODOCK_TEST_IMAGE=alpine:latest make integration
+```
+
+Integration tests require the chosen Alpine image to be present and create
+uniquely labeled resources. They clean up only IDs they created, including
+the fixture volume. They never prune or mutate your existing containers.
+CI preloads Alpine 3.22 and runs integration tests on every push and PR.
+
+The Linux PTY suite exercises keyboard input, resizing, cancellation, logs,
+search, disconnected mode and restoration after SIGINT/SIGTERM:
+
+```sh
+python3 -m venv .venv
+.venv/bin/pip install -r test/terminal/requirements.txt
+make build
+.venv/bin/python test/terminal/smoke.py dist/exodock
+```
+
+GitHub Actions checks formatting, vet, race tests, Docker integration,
+vulnerabilities, terminal journeys, documentation links and compilation for
+Linux/macOS amd64/arm64 and experimental Windows amd64. Linux has live Engine
+and PTY tests. macOS Desktop and WSL need platform-specific runtime validation;
+Windows is a compile-tested experimental target. See the
+[development guide](docs/development.md).
+
+## Project documentation
+
+- [Implemented MVP and limits](docs/mvp.md)
+- [Architecture and product conception](docs/conception.md)
+- [Accepted stack decision](docs/adr/0001-stack.md)
+- [Collection and cancellation decision](docs/adr/0002-collection.md)
+- [Brand token provenance](docs/brand.md)
+- [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+
+Released under the [MIT license](LICENSE). Maintained by
+[Exodialabs](https://github.com/exodialabs), [exodialabs.dev](https://exodialabs.dev).
