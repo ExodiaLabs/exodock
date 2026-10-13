@@ -17,6 +17,20 @@ supported runtime platform.
 
 ## Run the application
 
+Install the command for your user account from the repository root:
+
+```sh
+make install
+cd /tmp
+exodock --demo
+```
+
+The target copies a standalone executable into `~/.local/bin`, which must be
+in `PATH`. You can override `PREFIX`, `BINDIR` and the packaging staging prefix
+`DESTDIR`. Installing never changes shell files or requests elevated privileges.
+The command does not depend on the source directory or the `dist` directory
+after installation. Reinstall after rebuilding to update the installed copy.
+
 From the repository root, start the live Docker UI with:
 
 ```sh
@@ -46,8 +60,8 @@ startup, the UI shows a disconnected state and allows retrying. If standard
 input or output is not a terminal, Exodock exits with a message to use an
 interactive terminal or `--help`.
 
-There is no published installer or release archive yet. Build the executable
-from source with:
+There is no published release archive yet. Build the executable without
+installing it with:
 
 ```sh
 make build
