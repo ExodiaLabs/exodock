@@ -112,6 +112,14 @@ class Terminal:
             self.pump()
         raise AssertionError(f"Stale terminal text {text!r}\n{self.text()}")
 
+    def wait_pattern(self, pattern: str, timeout: float = 10):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if re.search(pattern, self.text()):
+                return
+            self.pump()
+        raise AssertionError(f"Missing terminal pattern {pattern!r}\n{self.text()}")
+
     def background(self, row: int, start: int, end: int, expected: str):
         observed = {self.screen.buffer[row][col].bg for col in range(start, end)}
         assert observed == {expected}, f"Background lost on row {row}, cells {start}:{end}: {observed}, expected {expected}\n{self.text()}"
@@ -291,7 +299,8 @@ def exercise_color_themes(binary: str):
             t.wait_absent("FIND A RESOURCE")
             t.key("2\t")
             t.wait("items · all resources")
-            t.wait("exolan-api-1")
+            # A PTY read can end halfway through a differential frame.
+            t.wait_pattern(r"exolan-api-1 +running +healthy")
             for row, line in enumerate(t.screen.display):
                 name_col = line.find("exolan-api-1")
                 if name_col >= 0 and "running" in line:

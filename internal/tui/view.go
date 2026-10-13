@@ -155,7 +155,13 @@ func (m *Model) footerLine(w int) string {
 	if m.tab == "Logs" && m.detailOpen {
 		keys = " / search  Space pause  f follow  v stream  t time  Esc back"
 	} else if m.section >= 1 && m.section <= 6 {
-		keys = " j/k move  Enter details  / filter  a actions  l logs  s stats"
+		keys = " j/k move  Enter details  / filter  i inspect  ? help"
+		if m.section == 1 || m.section == 6 {
+			keys = " j/k move  Enter details  / filter  a actions  l logs  s stats"
+		}
+		if m.section == 1 && !m.detailOpen {
+			keys = " j/k move  Enter details  / filter  f state  a actions  ? help"
+		}
 	} else if m.section == 7 {
 		keys = " d disk usage  r refresh  [/] sections  ? help  q quit"
 	}
@@ -164,7 +170,10 @@ func (m *Model) footerLine(w int) string {
 		case m.tab == "Logs" && m.detailOpen:
 			keys = " / search  Space pause  f follow  v stream  Esc back"
 		case m.section >= 1 && m.section <= 6:
-			keys = " j/k move  Enter details  a actions  / filter  ? help"
+			keys = " j/k move  Enter details  / filter  i inspect  ? help"
+			if m.section == 1 || m.section == 6 {
+				keys = " j/k move  Enter details  a actions  / filter  ? help"
+			}
 		case m.section == 0:
 			keys = " Enter browse  a attention  Ctrl+k find  ? help  q quit"
 		}

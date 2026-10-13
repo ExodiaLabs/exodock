@@ -588,11 +588,15 @@ func (m *Model) key(msg tea.KeyPressMsg) tea.Cmd {
 		if m.section == 0 {
 			return m.switchSectionFiltered(1, "attention")
 		}
+		if m.section != 1 && m.section != 6 {
+			m.notice, m.noticeTone = "Open Containers (2) to manage a container", "muted"
+			return nil
+		}
 		m.overlay = "actions"
 		m.menuIndex = 0
 	case "l":
 		r, ok := m.resource()
-		if ok && r.Kind == core.Containers {
+		if ok && r.Kind == core.Containers && (m.section == 1 || m.section == 6) {
 			m.tab = "Logs"
 			m.detailOpen = true
 			m.focus = 2
@@ -600,13 +604,17 @@ func (m *Model) key(msg tea.KeyPressMsg) tea.Cmd {
 		}
 		m.notice = "Logs are available for containers; open Containers (2)"
 	case "i":
+		if m.section == 0 || m.section == 7 {
+			m.notice, m.noticeTone = "Select a resource in an inventory to inspect it", "muted"
+			return nil
+		}
 		m.tab = "Inspect"
 		m.detailOpen = true
 		m.focus = 2
 		return m.resetSelection()
 	case "s":
 		r, ok := m.resource()
-		if ok && r.Kind == core.Containers {
+		if ok && r.Kind == core.Containers && (m.section == 1 || m.section == 6) {
 			m.tab = "Stats"
 			m.detailOpen = true
 			m.focus = 2
