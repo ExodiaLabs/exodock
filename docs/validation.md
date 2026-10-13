@@ -41,7 +41,34 @@ opened the live inventories and measured disk usage. Its observed RSS was
 18,284 kB (about 18 MiB). This single inventory session is not a sustained-load
 or 100-container memory benchmark.
 
-## Limits
+## Terminal redesign validation
+
+The October 13 redesign adds a full dark/light/ASCII/monochrome layout matrix,
+live one-Enter search and palette journeys, combined status/text filters,
+unknown health on collection failure, frozen complete confirmations, and bounded
+motion scheduling. Actual PTY checks verify entire header, card and selected-row
+backgrounds, including padding; a nested SGR reset regression was reproduced
+before correction. An independent review reproduced four display defects and
+verified their corrections, plus RGB payload/reset handling.
+
+After redesign, the same monochrome log benchmark measured **1.41 ms/render**,
+**264,220 B/op**, **913 allocs/op**. The colored workspace benchmark at 120×32,
+with 1,000 containers and 10,000 retained log entries, measured:
+
+| Screen | Dark | Light |
+| --- | --- | --- |
+| Overview | 2.66 ms | 2.76 ms |
+| Containers | 2.75 ms | 3.21 ms |
+| Logs | 2.84 ms | 2.80 ms |
+
+These local `-benchtime=150ms` samples measure render work, not interaction p95.
+The richer composition increases the baseline rendering cost. Animation ticks
+run only for six startup frames or pending work, at most ten per second; no
+animation timer continues at rest. Docker polling retains its configured rate.
+The [screenshots](ui-ux.md) were captured from actual demo PTY cells, rather than
+designed mockups; the chosen monospace font illustrates a terminal setting.
+
+## Platform limits
 
 Docker Desktop macOS, WSL and native Windows still require runtime recipes.
 Full-workload p95 keyboard latency and memory budgets remain measurements to

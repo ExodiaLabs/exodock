@@ -48,3 +48,23 @@ func TestInvalidOptions(t *testing.T) {
 		t.Fatal("positional argument accepted")
 	}
 }
+
+func TestReducedMotionPreferenceAndExplicitOverride(t *testing.T) {
+	for _, tc := range []struct {
+		args             []string
+		preference, want bool
+	}{{nil, true, true}, {[]string{"--reduced-motion=false"}, true, false}, {[]string{"--reduced-motion"}, false, true}} {
+		o, err := parseOptions(tc.args, &bytes.Buffer{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		s := config.Default()
+		s.ReducedMotion = tc.preference
+		if err := o.apply(s); err != nil {
+			t.Fatal(err)
+		}
+		if o.reducedMotion != tc.want {
+			t.Fatalf("args=%v preference=%t got=%t", tc.args, tc.preference, o.reducedMotion)
+		}
+	}
+}

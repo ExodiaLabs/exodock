@@ -1,30 +1,40 @@
-# Exodialabs brand tokens
+# Couleurs Exodialabs
 
-The official website's default branch establishes the palette. Source snapshot:
-repository `ExodiaLabs/exodialabs-website`, branch `develop`, commit
-`c65f6dcd91bf7b94634f9ca289b4e8af1e37335d` (checked 2026-10-13).
+La palette provient du site officiel, dépôt `ExodiaLabs/exodialabs-website`,
+branche par défaut `develop`, commit
+`c65f6dcd91bf7b94634f9ca289b4e8af1e37335d`, consulté le 13 octobre 2026.
 
-Its `docs/design-system.md` documents the Figma “00 — Design System” frame and
-states that `assets/styles/settings/tokens.css` mirrors primitive and semantic
-variables. We consulted these files through authenticated read-only GitHub
-access after the public site returned HTTP 403. These provenance links may
-require repository access:
+Le fichier `docs/design-system.md` décrit le cadre Figma « 00 — Design System »
+et indique que `assets/styles/settings/tokens.css` reprend les variables
+primitives et sémantiques. Nous avons consulté ces fichiers via un accès GitHub
+authentifié en lecture seule après une réponse HTTP 403 du site public. Ces
+liens peuvent nécessiter l'accès au dépôt :
 
-- [Design system source](https://github.com/ExodiaLabs/exodialabs-website/blob/c65f6dcd91bf7b94634f9ca289b4e8af1e37335d/docs/design-system.md)
-- [CSS token source](https://github.com/ExodiaLabs/exodialabs-website/blob/c65f6dcd91bf7b94634f9ca289b4e8af1e37335d/assets/styles/settings/tokens.css)
+- [Système de design](https://github.com/ExodiaLabs/exodialabs-website/blob/c65f6dcd91bf7b94634f9ca289b4e8af1e37335d/docs/design-system.md)
+- [Variables CSS](https://github.com/ExodiaLabs/exodialabs-website/blob/c65f6dcd91bf7b94634f9ca289b4e8af1e37335d/assets/styles/settings/tokens.css)
 
-| Official primitive | Exact value | TUI use |
+| Primitive officielle | Valeur exacte | Usage terminal |
 | --- | --- | --- |
-| Violet | `#7960a6` | Light-theme identity/accent |
-| Lavender | `#bba9dc` | Dark-theme identity/accent |
-| White | `#f5f2f9` | Dark-theme foreground, light-theme background |
-| Prune | `#15111e` | Dark-theme background, light-theme foreground |
-| Grey | `#8c8697` | Dark-theme secondary text |
-| Anthracite | `#1d1927`, `#27222f`, `#38323f` | Neutral surfaces and light-theme secondary text |
-| Shadow facet | `#543680` | Additional established accent token |
+| Violet | `#7960a6` | Accent du thème clair |
+| Lavender | `#bba9dc` | Accent du thème sombre |
+| White | `#f5f2f9` | Texte sombre, panneaux clairs |
+| Prune | `#15111e` | Bandeau sombre, texte clair |
+| Void / light void | `#0b0910`, `#ece5f5` | Fond de l'espace de travail sombre / clair |
+| Grey | `#8c8697`, `#b4aebe`, `#5e5868` | Texte secondaire et texte de soutien, variantes sombres et claires |
+| Anthracite | `#1d1927`, `#27222f`, `#38323f` | Panneaux, cartes et texte secondaire clair |
+| Shadow facet | `#543680` | Ligne sélectionnée sombre |
+| Mist | `#decdf2` | Ligne sélectionnée claire |
+| Glow / deep glow | `#b274f2`, `#7041d1` | Accent complémentaire sombre / clair |
 
-State colors use terminal ANSI roles with explicit text. They introduce no new
-Exodialabs HEX primitives. Terminals with fewer colors approximate the palette.
-ASCII and `NO_COLOR` preserve navigation and state labels. Automatic theme
-selection uses the terminal's background response; if it supplies none, the
-dark theme remains the default. The terminal controls fonts.
+Exodock utilise ces valeurs du site pour séparer le fond, les panneaux, les
+cartes et les lignes sélectionnées. Dans le thème sombre, les couleurs d'état
+utilisent les rôles ANSI du terminal et conservent un libellé textuel. Le thème
+clair affiche les états dans le texte foncé principal en gras pour préserver la
+lisibilité. Ces rôles n'ajoutent pas de primitive HEX à la marque. Les terminaux
+à palette réduite approchent les valeurs.
+`--ascii` et `NO_COLOR` conservent les états et les repères de navigation.
+Le thème automatique utilise la réponse du terminal sur son fond ; sans réponse,
+Exodock garde le thème sombre. Le terminal contrôle les polices.
+
+[Le guide de l'interface](ui-ux.md) décrit les écrans, le focus clavier et les
+préférences d'affichage.

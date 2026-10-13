@@ -45,6 +45,7 @@ The CLI options currently implemented are:
 | `--readonly` | Disable all mutations |
 | `--ascii` | Use ASCII symbols and borders |
 | `--no-color` | Disable color output |
+| `--reduced-motion` | Disable startup and loading animations |
 | `--theme {dark,light,auto}` | Choose a terminal theme; defaults to `dark` |
 | `--context NAME` | Select a local Docker context |
 | `--host ADDRESS` | Select a local Docker socket; exclusive with `--context` |
@@ -54,7 +55,7 @@ The CLI options currently implemented are:
 
 `NO_COLOR` disables colors. Preferences default to the operating system's user
 configuration directory under `exodock/config.json`; the file can set theme,
-ASCII mode, no-color mode, and refresh interval. Explicit CLI values override
+ASCII mode, no-color mode, reduced motion (`reduced_motion`), and refresh interval. Explicit CLI values override
 the corresponding preferences. When the selected daemon is unavailable after
 startup, the UI shows a disconnected state and allows retrying. If standard
 input or output is not a terminal, Exodock exits with a message to use an
@@ -125,13 +126,32 @@ make build
 ```
 
 The journeys cover demo actions and default cancellation, logs and filters,
-safe inspection, statistics, search, disk accounting, small terminals,
+safe inspection, statistics, live search and palette with one Enter, disk accounting, small terminals,
+dark/light truecolor surfaces,
 read-only controls, missing-daemon errors and terminal restoration after normal
 exit/SIGINT/SIGTERM. They never mutate Docker.
+
+Capture a rendered terminal scene as SVG with the same pinned `pyte`
+environment. The capture script uses Python's standard library plus `pyte`;
+it reads actual PTY cell text, foregrounds and backgrounds:
+
+```sh
+.venv/bin/python scripts/capture-terminal.py dist/exodock /tmp/exodock-overview.svg --theme dark --scene overview --cols 120 --rows 36
+```
+
+Available scenes are `overview`, `containers`, `logs` and `search`; themes are
+`dark` and `light`. The script uses demo data and reduced motion. It produces
+SVG; converting a capture to PNG requires a separate SVG renderer.
 
 Performance measurements belong in [validation evidence](validation.md).
 The full-history render benchmark runs with:
 
 ```sh
-go test ./internal/tui -run '^$' -bench BenchmarkLogViewFullHistory -benchmem
+go test ./internal/tui -run '^$' -bench 'Benchmark(LogViewFullHistory|ColorWorkspace)' -benchmem
 ```
+
+The color workspace benchmark renders dark/light overview, container inventory
+and log screens with 1,000 containers and 10,000 retained log lines. It reports
+allocations alongside render time; the no-color log benchmark preserves the
+earlier baseline. UI behavior and palette sources are documented in
+[the interface guide](ui-ux.md) and [brand tokens](brand.md).

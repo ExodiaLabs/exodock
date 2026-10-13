@@ -15,6 +15,7 @@ type Settings struct {
 	Theme          string `json:"theme"`
 	ASCII          bool   `json:"ascii"`
 	NoColor        bool   `json:"no_color"`
+	ReducedMotion  bool   `json:"reduced_motion"`
 	RefreshSeconds int    `json:"refresh_seconds"`
 }
 
