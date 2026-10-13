@@ -16,6 +16,7 @@ import (
 type Options struct {
 	Target                   string
 	ReadOnly, ASCII, NoColor bool
+	ReducedMotion            bool
 	Theme                    string
 	RefreshInterval          time.Duration
 }
@@ -67,6 +68,13 @@ type Model struct {
 	diskReady                               bool
 	pollGeneration                          uint64
 	quitting                                bool
+	statusFilter                            string
+	animationFrame                          int
+	motionActive                            bool
+	motionGeneration                        uint64
+	startupFrames                           int
+	lastActivity                            string
+	noticeTone                              string
 }
 
 type snapshotMsg struct {
@@ -74,6 +82,7 @@ type snapshotMsg struct {
 	err      error
 }
 type refreshMsg struct{ generation uint64 }
+type motionMsg struct{ generation uint64 }
 type detailMsg struct {
 	gen    uint64
 	detail core.Detail
@@ -108,12 +117,16 @@ func New(ctx context.Context, b core.Backend, e core.Executor, o Options) *Model
 	if o.RefreshInterval <= 0 {
 		o.RefreshInterval = 5 * time.Second
 	}
-	m := &Model{ctx: ctx, cancel: cancel, backend: b, executor: e, opts: o, width: 100, height: 28, tab: "Summary", logStream: "all", notice: "Connecting to Docker…"}
+	m := &Model{ctx: ctx, cancel: cancel, backend: b, executor: e, opts: o, width: 100, height: 28, tab: "Summary", logStream: "all", notice: "Connecting to Docker…", noticeTone: "muted", lastActivity: "Waiting for Docker"}
 	m.selectionCtx, m.selectionCancel = context.WithCancel(ctx)
 	return m
 }
 func (m *Model) Init() tea.Cmd {
 	cmd := m.refresh()
+	if !m.opts.ReducedMotion && !m.opts.NoColor {
+		m.startupFrames = 6
+		cmd = tea.Batch(cmd, m.scheduleMotion())
+	}
 	if (m.opts.Theme == "auto" || m.opts.Theme == "") && !m.opts.NoColor {
 		return tea.Batch(cmd, tea.RequestBackgroundColor)
 	}
@@ -139,15 +152,21 @@ func (m *Model) poll() tea.Cmd {
 func (m *Model) resources() []core.Resource {
 	kind := m.kind()
 	list := m.snapshot.Resources[kind]
+	if m.filter == "" && (kind != core.Containers || m.statusFilter == "") {
+		return list
+	}
 	out := make([]core.Resource, 0, len(list))
 	for _, r := range list {
-		if matches(r, m.filter) {
+		if matches(r, m.filter) && (kind != core.Containers || matchesStatus(r, m.statusFilter)) {
 			out = append(out, r)
 		}
 	}
 	return out
 }
 func matches(r core.Resource, q string) bool {
+	if q == "" {
+		return true
+	}
 	return strings.Contains(strings.ToLower(r.Name+" "+r.ID+" "+r.Image+" "+r.State+" "+r.Health+" "+r.Project+" "+r.Service), strings.ToLower(q))
 }
 func (m *Model) kind() core.Kind {
@@ -269,10 +288,15 @@ func (m *Model) loadDisk() tea.Cmd {
 	}
 }
 func (m *Model) switchSection(n int) tea.Cmd {
+	return m.switchSectionFiltered(n, "")
+}
+
+func (m *Model) switchSectionFiltered(n int, status string) tea.Cmd {
 	m.section = (n + len(sections)) % len(sections)
 	m.focus = 1
 	m.selected = 0
 	m.filter = ""
+	m.statusFilter = status
 	m.detailOpen = false
 	m.tab = "Summary"
 	if m.section == 6 {
@@ -282,8 +306,20 @@ func (m *Model) switchSection(n int) tea.Cmd {
 	}
 	return m.resetSelection()
 }
-func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *Model) Update(msg tea.Msg) (next tea.Model, command tea.Cmd) {
+	defer func() {
+		if tick := m.scheduleMotion(); tick != nil {
+			command = tea.Batch(command, tick)
+		}
+	}()
 	switch msg := msg.(type) {
+	case motionMsg:
+		if msg.generation != m.motionGeneration || !m.motionActive {
+			return m, nil
+		}
+		m.motionActive = false
+		m.animationFrame = (m.animationFrame + 1) % 12
+		m.startupFrames = max(0, m.startupFrames-1)
 	case tea.BackgroundColorMsg:
 		if m.opts.Theme == "auto" || m.opts.Theme == "" {
 			m.lightTheme = !msg.IsDark()
@@ -304,13 +340,21 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.refreshing = false
 		if msg.err != nil {
 			m.connected = false
+			m.noticeTone = "bad"
 			m.notice = "Docker unavailable: " + safety.Clean(msg.err.Error()) + " · r retry; verify the daemon and target"
 			return m, m.poll()
 		}
 		m.connected = true
+		if m.lastActivity == "Waiting for Docker" {
+			m.lastActivity = "Inventory synchronized · " + msg.snapshot.CollectedAt.Format("15:04:05")
+		}
 		m.snapshot = msg.snapshot
+		if m.overlay == "global" || (m.overlay == "input" && m.inputMode == "global") {
+			m.menuIndex = max(0, min(m.menuIndex, len(m.globalResults())-1))
+		}
 		if strings.HasPrefix(m.notice, "Connecting") || strings.HasPrefix(m.notice, "Inventory updated") || strings.HasPrefix(m.notice, "Docker unavailable") {
 			m.notice = "Inventory updated " + msg.snapshot.CollectedAt.Format("15:04:05")
+			m.noticeTone = "muted"
 		}
 		list := m.resources()
 		m.selected = 0
@@ -345,6 +389,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.statsPending = false
 		if msg.err != nil {
+			m.noticeTone = "bad"
 			m.notice = "Stats unavailable: " + safety.Clean(msg.err.Error()) + " · r retry"
 		} else {
 			m.stats = msg.stats
@@ -395,14 +440,18 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case actionMsg:
 		m.actionPending = false
 		if msg.err != nil {
+			m.noticeTone = "bad"
 			m.notice = string(msg.request.Action) + " failed: " + safety.Clean(msg.err.Error()) + " · verify the state, then r refresh"
 		} else {
+			m.noticeTone = "good"
 			m.notice = string(msg.request.Action) + " completed · " + safety.Clean(msg.request.ID)
 		}
+		m.lastActivity = m.notice
 		return m, m.refresh()
 	case diskMsg:
 		m.diskPending = false
 		if msg.err != nil {
+			m.noticeTone = "bad"
 			m.notice = "Disk usage unavailable: " + safety.Clean(msg.err.Error()) + " · d retry"
 		} else {
 			m.disk = msg.disk
@@ -411,6 +460,7 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.PasteMsg:
 		if m.overlay == "input" {
 			m.input = boundedInput(m.input + msg.String())
+			m.menuIndex = 0
 		}
 	case tea.KeyPressMsg:
 		return m, m.key(msg)
@@ -442,37 +492,7 @@ func (m *Model) key(msg tea.KeyPressMsg) tea.Cmd {
 		return nil
 	}
 	if m.overlay == "input" {
-		switch key {
-		case "esc":
-			m.overlay = ""
-			m.input = ""
-		case "enter":
-			m.overlay = ""
-			switch m.inputMode {
-			case "filter":
-				m.filter = m.input
-				m.selected = 0
-				return m.resetSelection()
-			case "logs":
-				m.logQuery = m.input
-			case "global":
-				m.overlay = "global"
-				m.menuIndex = 0
-			case "palette":
-				m.overlay = "palette"
-				m.menuIndex = 0
-			}
-		case "backspace":
-			r := []rune(m.input)
-			if len(r) > 0 {
-				m.input = string(r[:len(r)-1])
-			}
-		default:
-			if msg.Text != "" {
-				m.input = boundedInput(m.input + msg.Text)
-			}
-		}
-		return nil
+		return m.inputKey(msg)
 	}
 	if m.overlay != "" {
 		return m.overlayKey(key)
@@ -490,10 +510,12 @@ func (m *Model) key(msg tea.KeyPressMsg) tea.Cmd {
 		m.overlay = "input"
 		m.inputMode = "global"
 		m.input = ""
+		m.menuIndex = 0
 	case ":":
 		m.overlay = "input"
 		m.inputMode = "palette"
 		m.input = ""
+		m.menuIndex = 0
 	case "/":
 		m.overlay = "input"
 		m.inputMode = "filter"
@@ -550,8 +572,9 @@ func (m *Model) key(msg tea.KeyPressMsg) tea.Cmd {
 			m.focus = 1
 			return m.resetSelection()
 		}
-		if m.filter != "" {
+		if m.filter != "" || m.statusFilter != "" {
 			m.filter = ""
+			m.statusFilter = ""
 			m.selected = 0
 			return m.resetSelection()
 		}
@@ -562,11 +585,18 @@ func (m *Model) key(msg tea.KeyPressMsg) tea.Cmd {
 			return m.loadDisk()
 		}
 	case "a":
+		if m.section == 0 {
+			return m.switchSectionFiltered(1, "attention")
+		}
+		if m.section != 1 && m.section != 6 {
+			m.notice, m.noticeTone = "Open Containers (2) to manage a container", "muted"
+			return nil
+		}
 		m.overlay = "actions"
 		m.menuIndex = 0
 	case "l":
 		r, ok := m.resource()
-		if ok && r.Kind == core.Containers {
+		if ok && r.Kind == core.Containers && (m.section == 1 || m.section == 6) {
 			m.tab = "Logs"
 			m.detailOpen = true
 			m.focus = 2
@@ -574,13 +604,17 @@ func (m *Model) key(msg tea.KeyPressMsg) tea.Cmd {
 		}
 		m.notice = "Logs are available for containers; open Containers (2)"
 	case "i":
+		if m.section == 0 || m.section == 7 {
+			m.notice, m.noticeTone = "Select a resource in an inventory to inspect it", "muted"
+			return nil
+		}
 		m.tab = "Inspect"
 		m.detailOpen = true
 		m.focus = 2
 		return m.resetSelection()
 	case "s":
 		r, ok := m.resource()
-		if ok && r.Kind == core.Containers {
+		if ok && r.Kind == core.Containers && (m.section == 1 || m.section == 6) {
 			m.tab = "Stats"
 			m.detailOpen = true
 			m.focus = 2
@@ -594,6 +628,20 @@ func (m *Model) key(msg tea.KeyPressMsg) tea.Cmd {
 			}
 		}
 	case "f":
+		if m.section == 1 && !m.detailOpen {
+			switch m.statusFilter {
+			case "":
+				m.statusFilter = "running"
+			case "running":
+				m.statusFilter = "stopped"
+			case "stopped":
+				m.statusFilter = "attention"
+			default:
+				m.statusFilter = ""
+			}
+			m.selected = 0
+			return m.resetSelection()
+		}
 		if m.tab == "Logs" {
 			m.logPaused = false
 			m.logOffset = 0
@@ -684,7 +732,7 @@ func (m *Model) overlayKey(key string) tea.Cmd {
 				m.notice = "Action unavailable in read-only mode or while busy"
 				return nil
 			}
-			if len(m.confirmationLines(m.width)) > m.height-9 {
+			if !m.confirmationFits() {
 				m.notice = "Resize terminal to show the complete confirmation; Esc cancels"
 				return nil
 			}
@@ -693,6 +741,8 @@ func (m *Model) overlayKey(key string) tea.Cmd {
 			m.overlay = ""
 			m.actionPending = true
 			m.notice = string(req.Action) + " in progress…"
+			m.noticeTone = "accent"
+			m.lastActivity = m.notice
 			ctx := m.ctx
 			return func() tea.Msg {
 				c, cancel := context.WithTimeout(ctx, 45*time.Second)
@@ -738,32 +788,9 @@ func (m *Model) overlayKey(key string) tea.Cmd {
 			m.confirm = false
 			m.overlay = "confirm"
 		case "global":
-			r := m.globalResults()[m.menuIndex]
-			m.overlay = ""
-			for i, k := range []core.Kind{core.Containers, core.Images, core.Volumes, core.Networks, core.Compose} {
-				if k == r.Kind {
-					m.section = i + 1
-					break
-				}
-			}
-			m.filter = ""
-			for i, item := range m.resources() {
-				if item.ID == r.ID {
-					m.selected = i
-					break
-				}
-			}
-			m.detailOpen = true
-			m.focus = 2
-			m.tab = "Summary"
-			return m.resetSelection()
+			return m.openGlobalSelection()
 		case "palette":
-			entry := m.paletteResults()[m.menuIndex]
-			m.overlay = ""
-			if entry.section >= 0 {
-				return m.switchSection(entry.section)
-			}
-			return m.key(tea.KeyPressMsg{Code: rune(entry.key[0]), Text: entry.key})
+			return m.openPaletteSelection()
 		}
 	}
 	return nil
@@ -792,7 +819,16 @@ func (m *Model) paletteResults() []paletteEntry {
 			out = append(out, paletteEntry{"Go to " + s, "", i})
 		}
 	}
-	for _, e := range []paletteEntry{{"Refresh inventory", "r", -1}, {"Container actions", "a", -1}, {"View logs", "l", -1}, {"View stats", "s", -1}, {"Inspect selection", "i", -1}, {"Help", "?", -1}} {
+	entries := []paletteEntry{{"Refresh inventory", "r", -1}, {"Help", "?", -1}}
+	if m.section == 0 {
+		entries = append(entries, paletteEntry{"View attention containers", "a", -1})
+	} else if r, ok := m.resource(); ok && m.section != 7 {
+		entries = append(entries, paletteEntry{"Inspect selection", "i", -1})
+		if r.Kind == core.Containers {
+			entries = append(entries, paletteEntry{"Container actions", "a", -1}, paletteEntry{"View logs", "l", -1}, paletteEntry{"View stats", "s", -1})
+		}
+	}
+	for _, e := range entries {
 		if strings.Contains(strings.ToLower(e.name), strings.ToLower(m.input)) {
 			out = append(out, e)
 		}

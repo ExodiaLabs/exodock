@@ -28,6 +28,7 @@ var version = "0.1.0-dev"
 
 type options struct {
 	demo, readonly, ascii, noColor, version bool
+	reducedMotion                           bool
 	theme, context, host, configPath        string
 	refresh                                 time.Duration
 	visited                                 map[string]bool
@@ -41,6 +42,7 @@ func parseOptions(args []string, out io.Writer) (options, error) {
 	fs.BoolVar(&o.readonly, "readonly", false, "disable all Docker changes")
 	fs.BoolVar(&o.ascii, "ascii", false, "use ASCII symbols and borders")
 	fs.BoolVar(&o.noColor, "no-color", false, "disable terminal colors")
+	fs.BoolVar(&o.reducedMotion, "reduced-motion", false, "disable startup and activity animations")
 	fs.BoolVar(&o.version, "version", false, "print the application version")
 	fs.StringVar(&o.theme, "theme", "dark", "terminal theme: dark, light or auto")
 	fs.StringVar(&o.context, "context", "", "select a local Docker context")
@@ -67,6 +69,9 @@ func (o *options) apply(s config.Settings) error {
 	}
 	if !o.visited["no-color"] {
 		o.noColor = s.NoColor
+	}
+	if !o.visited["reduced-motion"] {
+		o.reducedMotion = s.ReducedMotion
 	}
 	if !o.visited["theme"] {
 		o.theme = s.Theme
@@ -133,7 +138,7 @@ func run(args []string, out io.Writer) error {
 		}
 	}
 	defer backend.Close()
-	model := tui.New(ctx, backend, app.New(backend, o.readonly), tui.Options{Target: targetName, ReadOnly: o.readonly, ASCII: o.ascii, NoColor: o.noColor, Theme: o.theme, RefreshInterval: o.refresh})
+	model := tui.New(ctx, backend, app.New(backend, o.readonly), tui.Options{Target: targetName, ReadOnly: o.readonly, ASCII: o.ascii, NoColor: o.noColor, Theme: o.theme, RefreshInterval: o.refresh, ReducedMotion: o.reducedMotion})
 	_, err = tea.NewProgram(model, tea.WithContext(ctx)).Run()
 	if ctx.Err() != nil && errors.Is(err, tea.ErrProgramKilled) {
 		return nil

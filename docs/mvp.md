@@ -25,8 +25,10 @@ deferred.
 - CPU and memory statistics for the selected container, with a short CPU
   history.
 - On-demand Docker system information and disk usage.
-- In-memory global search and a keyboard command palette/help overlay.
-- Local Unix Docker targets, ASCII and no-color options, themes, read-only
+- In-memory live global search and command palette: type, select and open with
+  one Enter; keyboard help overlay.
+- Dashboard health distribution, an attention shortcut and container status filters.
+- Local Unix Docker targets, ASCII, no-color and reduced-motion options, themes, read-only
   mode, and configurable refresh interval.
 
 The UI displays the active target and connection state. Docker collection runs
@@ -34,6 +36,8 @@ off the render path, log buffers are bounded, and read-only mode blocks
 mutations at the use-case boundary. Removal confirmation retains the resource
 ID and target shown to the user. If the daemon is unavailable after startup,
 the UI shows a disconnected state and a retry instruction.
+The confirmation blocks execution when its full scope cannot fit the terminal.
+The [interface guide](ui-ux.md) describes keyboard journeys and display preferences.
 
 ## Validation still outstanding
 

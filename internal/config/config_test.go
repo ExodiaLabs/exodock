@@ -19,6 +19,7 @@ func TestLoadPreferences(t *testing.T) {
 	}{
 		{`{"version":1,"theme":"light","refresh_seconds":3}`, true},
 		{`{"theme":"dark"}`, true},
+		{`{"reduced_motion":true}`, true},
 		{`{"theme":"pink"}`, false}, {`{"version":2}`, false}, {`{"refresh_seconds":0}`, false}, {`{"unknown":"SECRET"}`, false}, {`{} {}`, false}, {`null`, false}, {`{}` + strings.Repeat(" ", 64*1024), false},
 	} {
 		if err = os.WriteFile(p, []byte(tt.input), 0600); err != nil {
