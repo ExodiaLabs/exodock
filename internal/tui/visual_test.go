@@ -316,7 +316,7 @@ func TestNoColorFocusAndStatesRemainReadable(t *testing.T) {
 	}
 	m.focus = 0
 	view = m.View().Content
-	if !strings.Contains(view, "* EXODIALABS") || strings.Contains(view, "* CONTAINERS") {
+	if !strings.Contains(view, "* NAVIGATION") || strings.Contains(view, "* CONTAINERS") {
 		t.Fatal("no-color focus marker did not follow the active panel")
 	}
 }

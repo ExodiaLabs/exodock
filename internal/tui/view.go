@@ -115,7 +115,7 @@ func (m *Model) workspace(w, h int) string {
 	if w >= 80 && h >= 18 {
 		navW := 20
 		mainW := w - navW - 1
-		nav := m.box("EXODIALABS", m.navLinesWidth(navW-2), navW, h, m.focus == 0)
+		nav := m.box("NAVIGATION", m.navLinesWidth(navW-2), navW, h, m.focus == 0)
 		if m.section != 0 && w >= 120 && h >= 24 && !(m.detailOpen && m.tab != "Summary") {
 			detailW := min(38, w/3)
 			mainW -= detailW + 1

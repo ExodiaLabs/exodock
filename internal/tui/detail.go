@@ -32,7 +32,7 @@ func (m *Model) detailTitle() string {
 }
 func (m *Model) detailLines(w, h int) []string {
 	if m.section == 0 {
-		return []string{"", m.style("  Everything in one place.", "accent"), "", "  2  Browse containers", "  /  Filter the current list", "  Ctrl+k  Search all resources", "  Enter  Open resource details", "  a  See available actions", "", "  ?  Keyboard guide", "", "  Changes always require", "  confirmation on this target.", "", "  Exodialabs brand palette.", "  Exodock by Exodialabs."}
+		return []string{"", m.style("  Everything in one place.", "accent"), "", "  2  Browse containers", "  /  Filter the current list", "  Ctrl+k  Search all resources", "  Enter  Open resource details", "  a  See available actions", "", "  ?  Keyboard guide", "", "  Changes always require", "  confirmation on this target."}
 	}
 	if m.section == 7 {
 		return []string{"", "  Metrics describe the Docker", "  daemon, including its VM when", "  Docker Desktop is in use.", "", "  Disk usage is measured only", "  when you request it with d.", "  Shared image layers follow", "  Docker's disk accounting.", "", "  No host free-space estimate.", "  No prune or force removal.", "", "  r refreshes the inventory."}
