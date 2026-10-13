@@ -60,7 +60,7 @@ def capture(binary, destination, theme, scene, cols=120, rows=36):
         svg.extend(["</g>", "</svg>"])
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text("\n".join(svg) + "\n")
-        terminal.exit()
+        terminal.exit(key="\x03")  # Ctrl+c also quits while a text overlay is open.
     finally:
         terminal.close()
 

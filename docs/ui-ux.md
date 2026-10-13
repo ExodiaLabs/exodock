@@ -101,6 +101,8 @@ Captures du backend de démonstration, le 13 octobre 2026 :
 
 ![Inventaire des conteneurs Exodock, thème sombre](screenshots/containers-dark.png)
 
+![Recherche globale Exodock en cours de saisie](screenshots/search-dark.png)
+
 Les tests Go couvrent les dimensions, les thèmes, les cadres ASCII, les champs
 de recherche et les confirmations. Les parcours PTY utilisent le backend de
 démonstration : ils contrôlent les raccourcis, les couleurs sombres et claires,

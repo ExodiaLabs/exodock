@@ -133,7 +133,9 @@ exit/SIGINT/SIGTERM. They never mutate Docker.
 
 Capture a rendered terminal scene as SVG with the same pinned `pyte`
 environment. The capture script uses Python's standard library plus `pyte`;
-it reads actual PTY cell text, foregrounds and backgrounds:
+it reads actual PTY cell text, foregrounds and backgrounds. The test emulator
+extends pyte with xterm SU/SD scrolling, including regions, unchanged cursor
+position and active erase backgrounds, to follow differential redraws:
 
 ```sh
 .venv/bin/python scripts/capture-terminal.py dist/exodock /tmp/exodock-overview.svg --theme dark --scene overview --cols 120 --rows 36

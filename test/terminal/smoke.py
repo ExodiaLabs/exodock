@@ -20,12 +20,44 @@ import time
 import pyte
 
 
+class Screen(pyte.Screen):
+    """Support xterm SU/SD used by Bubble Tea's differential renderer."""
+
+    def scroll_up(self, count: int = 1):
+        self.scroll_region(count, upward=True)
+
+    def scroll_down(self, count: int = 1):
+        self.scroll_region(count, upward=False)
+
+    def scroll_region(self, count: int, upward: bool):
+        top, bottom = self.margins or (0, self.lines - 1)
+        saved_y = self.cursor.y
+        edge = bottom if upward else top
+        try:
+            self.cursor.y = edge
+            for _ in range(min(count or 1, bottom - top + 1)):
+                if upward:
+                    self.index()
+                else:
+                    self.reverse_index()
+                # xterm erases new cells with the active background (BCE).
+                for x in range(self.columns):
+                    self.buffer[edge][x] = self.cursor.attrs
+        finally:
+            self.cursor.y = saved_y
+
+
+class Stream(pyte.Stream):
+    csi = {**pyte.Stream.csi, "S": "scroll_up", "T": "scroll_down"}
+    events = pyte.Stream.events | {"scroll_up", "scroll_down"}
+
+
 class Terminal:
     def __init__(self, binary: str, args: list[str], cols: int = 120, rows: int = 32, color: bool = False):
         self.master, self.slave = pty.openpty()
         self.original = termios.tcgetattr(self.slave)
-        self.screen = pyte.Screen(cols, rows)
-        self.stream = pyte.Stream(self.screen)
+        self.screen = Screen(cols, rows)
+        self.stream = Stream(self.screen)
         self.decoder = codecs.getincrementaldecoder("utf-8")("replace")
         self.raw = bytearray()
         self.resize(cols, rows)
@@ -71,6 +103,14 @@ class Terminal:
 
     def key(self, text: str):
         os.write(self.master, text.encode())
+
+    def wait_absent(self, text: str, timeout: float = 10):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if text not in self.text():
+                return
+            self.pump()
+        raise AssertionError(f"Stale terminal text {text!r}\n{self.text()}")
 
     def background(self, row: int, start: int, end: int, expected: str):
         observed = {self.screen.buffer[row][col].bg for col in range(start, end)}
@@ -235,7 +275,22 @@ def exercise_color_themes(binary: str):
             card_bottom = next(row for row, line in enumerate(t.screen.display) if row > card_row and "loaded inventory" in line)
             for row in range(card_row, card_bottom + 1):
                 t.background(row, card_left, card_right, card)
+            t.key("\x0b")
+            t.wait("FIND A RESOURCE")
+            t.key("exolan")
+            t.wait("› exolan_")
+            t.wait("Up/Down select")
+            top = next(row for row, line in enumerate(t.screen.display) if "FIND A RESOURCE" in line)
+            bottom = next(row for row, line in enumerate(t.screen.display) if row > top and "Up/Down select" in line)
+            left = t.screen.display[top].index("╭")
+            right = t.screen.display[top].index("╮") + 1
+            results = "\n".join(line[left:right] for line in t.screen.display[top:bottom+1])
+            assert "exolan-api-1" in results and "exolan_db" in results
+            assert "signinforge" not in results, "Filtered search retained old result rows"
+            t.key("\x1b")
+            t.wait_absent("FIND A RESOURCE")
             t.key("2\t")
+            t.wait("items · all resources")
             t.wait("exolan-api-1")
             for row, line in enumerate(t.screen.display):
                 name_col = line.find("exolan-api-1")
@@ -245,7 +300,7 @@ def exercise_color_themes(binary: str):
                     t.background(row, left + 1, right, selected)
                     break
             else:
-                raise AssertionError("Missing selected container status row")
+                raise AssertionError("Missing selected container status row\n" + t.text())
             t.key("a")
             t.wait("CONTAINER ACTIONS")
             t.key("j\r")
@@ -265,8 +320,22 @@ def exercise_color_themes(binary: str):
             t.close()
 
 
+def exercise_emulator_scroll_regions():
+    screen = Screen(5, 5)
+    stream = Stream(screen)
+    stream.feed("A\r\nB\r\nC\r\nD\r\nE")
+    stream.feed("\x1b[2;4r\x1b[5;3H\x1b[48;2;21;17;30m\x1b[S")
+    assert [line.strip() for line in screen.display] == ["A", "C", "D", "", "E"]
+    assert (screen.cursor.x, screen.cursor.y) == (2, 4), "SU changed cursor position"
+    assert {screen.buffer[3][x].bg for x in range(5)} == {"15111e"}, "SU lost erase background"
+    stream.feed("\x1b[T")
+    assert [line.strip() for line in screen.display] == ["A", "", "C", "D", "E"]
+    assert (screen.cursor.x, screen.cursor.y) == (2, 4), "SD changed cursor position"
+
+
 if __name__ == "__main__":
     binary = str(Path(sys.argv[1] if len(sys.argv) > 1 else "dist/exodock").resolve())
+    exercise_emulator_scroll_regions()
     exercise_demo(binary)
     exercise_readonly_and_signals(binary)
     exercise_disconnected(binary)

@@ -18,7 +18,8 @@ command palette show results as you type; one Enter opens the selection.
 ![Exodock dashboard in an actual terminal, demo backend](docs/screenshots/overview-dark.png)
 
 [Light theme](docs/screenshots/overview-light.png) ·
-[Container workspace](docs/screenshots/containers-dark.png)
+[Container workspace](docs/screenshots/containers-dark.png) ·
+[Live search](docs/screenshots/search-dark.png)
 
 ## Install the command
 
