@@ -8,7 +8,9 @@ anglais ; cette page explique les usages en français.
 ## Repérer l'état du poste
 
 Le bandeau conserve le nom Exodock, la connexion et le mode `READ ONLY` ou
-`READ / WRITE`. La cible Docker reste visible sous le bandeau. Le tableau de
+`READ / WRITE`. Le panneau latéral porte le titre `NAVIGATION` et l’aide
+affiche `KEYBOARD GUIDE` ; l’interface utilise uniquement le nom Exodock.
+La cible Docker reste visible sous le bandeau. Le tableau de
 bord `YOUR DOCKER WORKSPACE` présente les nombres de conteneurs actifs et
 arrêtés, la répartition de santé et les conteneurs à examiner.
 

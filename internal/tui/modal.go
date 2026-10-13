@@ -66,7 +66,7 @@ func (m *Model) modal(w, h int) string {
 		lines = append(lines, m.searchResultLines(m.overlay, w-2, max(1, h-6))...)
 		lines = append(lines, "", m.style(" Enter open · / edit query · Esc close", "accent"))
 	case "help":
-		title = "KEYBOARD GUIDE · EXODIALABS"
+		title = "KEYBOARD GUIDE"
 		all := []string{" j/k or Up/Down    Move selection or section", " Tab / Shift+Tab   Cycle navigation, list, details", " [ / ] or 1-8      Switch workspace section", " Enter / Esc       Open details / return", " /                 Filter list or search loaded logs", " Ctrl+k            Find a resource as you type", " :                 Navigation and action palette", " a                 Container actions; Overview attention", " f (Containers)    Cycle all / running / stopped", " l / s / i         Logs / stats / safe inspection", " r                 Refresh inventory, retry connection", " d (System)        Measure Docker disk usage", " Space (Logs)      Pause/resume scrolling", " f (Logs)          Return to live following", " v / t (Logs)      Cycle stream / time range", " j/k (Logs/Inspect) Scroll loaded history or fields", " q / Ctrl+c        Quit (q closes open overlays)", " Esc               Close or cancel confirmation", "", " Read-only disables all mutations.", " Confirmations default to Cancel and freeze the ID.", " Logs: 10,000 entries / 8 MiB; lines capped at 64 KiB.", " CPU: 100% is one CPU; selected-container scope."}
 		capacity := max(1, h-4)
 		start := min(max(0, m.menuIndex), max(0, len(all)-capacity))
