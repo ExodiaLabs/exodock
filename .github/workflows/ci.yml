@@ -51,6 +51,14 @@ jobs:
           python3 -m venv /tmp/exodock-terminal-tests
           /tmp/exodock-terminal-tests/bin/pip install -r test/terminal/requirements.txt
 
+      - name: Verify installed command outside the source directory
+        run: |
+          exodock_install_dir="$(mktemp -d)"
+          make install PREFIX="$exodock_install_dir"
+          cd /tmp
+          PATH="$exodock_install_dir/bin:$PATH" exodock --version
+          PATH="$exodock_install_dir/bin:$PATH" exodock --help
+
       - name: Exercise keyboard journeys and terminal restoration
         run: /tmp/exodock-terminal-tests/bin/python test/terminal/smoke.py dist/exodock
 

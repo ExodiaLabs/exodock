@@ -10,18 +10,36 @@ Exodock v0.1 is a development MVP written in Go with Bubble Tea v2 and the
 official Docker Engine SDK. It uses the established Exodialabs palette. It
 does not require a browser, a separate server or elevated privileges.
 
-## Run from source
+## Install the command
 
 Use Go 1.27.2 (the CI toolchain) and an interactive terminal of at least 60×18
 cells. Docker is required for live mode; the sandbox works without it.
 
 ```sh
-go mod download
-make build
-./dist/exodock --demo
-./dist/exodock --readonly
-./dist/exodock
+git clone https://github.com/exodialabs/exodock.git
+cd exodock
+make install
+exodock --demo
+exodock --readonly
+exodock
 ```
+
+`make install` builds and copies the executable to `~/.local/bin/exodock`.
+Once that directory is in your `PATH`, run `exodock` from any working directory.
+The installed command keeps working after you move the source tree or run
+`make clean`; it requires no Go toolchain at runtime.
+
+If your shell does not include `~/.local/bin`, add the following line to your
+shell startup file, then open a new terminal:
+
+```sh
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Use `make install PREFIX=/your/prefix` to choose another installation directory,
+or `BINDIR=/your/bin` to select the binary directory directly. Run `make install`
+again after updating the sources. No automatic privilege elevation occurs.
+To build without installing, use `make build` and run `./dist/exodock`.
 
 `--demo` never contacts Docker, and its actions affect only sample data.
 `--readonly` blocks mutations in both the UI and application/Engine layers.
@@ -69,11 +87,11 @@ overlay; `Ctrl+c` quits from any view. Press `?` for the complete guide.
 ## Docker targets and configuration
 
 ```sh
-./dist/exodock --context desktop-linux
-./dist/exodock --host unix:///run/user/1000/docker.sock --readonly
-./dist/exodock --ascii --no-color --refresh 3s
-./dist/exodock --theme light
-./dist/exodock --help
+exodock --context desktop-linux
+exodock --host unix:///run/user/1000/docker.sock --readonly
+exodock --ascii --no-color --refresh 3s
+exodock --theme light
+exodock --help
 ```
 
 `--context` and `--host` are mutually exclusive. Resolution follows explicit
